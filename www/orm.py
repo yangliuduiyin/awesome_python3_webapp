@@ -40,7 +40,7 @@ def create_pool(loop, **kw):
 
 # SELECT:
 # 要执行SELECT语句，我们用select函数执行，需要传入SQL语句和SQL参数：
-@asyncio.coroutine 
+@asyncio.coroutine
 def select(sql, args, size=None):
 	log(sql, args)
 	global __pool
@@ -103,7 +103,7 @@ class BooleanField(Field):
 	"""docstring for BooleanField"""
 	def __init__(self, name=None, default=False):
 		super().__init__(name, 'boolean', False, default)
-		
+
 
 class IntegerField(Field):
 	"""docstring for IntergerField"""
@@ -114,7 +114,7 @@ class FloatField(Field):
 	"""docstring for FloatField"""
 	def __init__(self, name=None, primary_key=False, default=0.0):
 		super().__init__(name, 'real', primary_key, default)
-		
+
 
 class TextField(Field):
 		"""docstring for TextField"""
@@ -122,9 +122,9 @@ class TextField(Field):
 			super().__init__(name, 'text', False, default)
 
 class ModelMetaclass(type):
-	
+
 	def __new__(cls, name, bases, attrs):
-		if name = 'Model':
+		if name == 'Model':
 			return type.__new__(cls, name, bases, attrs)
 			tablename = attrs.get('__table__', None) or name
 			logging.info('found model: %s (table: %s)' % (name, tablename))
@@ -133,7 +133,7 @@ class ModelMetaclass(type):
 			primaryKey = None
 			for k, v in attrs.items():
 				if isinstance(v, Field):
-					logging.info('found mapping: %s ==> %s' % (k, v))v
+					logging.info('found mapping: %s ==> %s' % (k, v))
 					mappings[k] = v
 					if v.primary_key:
 						# 找到主键
@@ -177,7 +177,7 @@ class Model(dict, metaclass=ModelMetaclass):
 			return self[key]
 		except KeyError:
 			raise AttributeError("'Model' object has no attribute '%s'" % key)
-		
+
 	def __setattr__(self, key, value):
 		self[key] = value
 
@@ -196,7 +196,7 @@ class Model(dict, metaclass=ModelMetaclass):
 
 	@classmethod
 	async def findAll(cls, where=None, args=None, **kw):
-		'find objects by where clause.'
+		#'find objects by where clause.'
 		sql = [cls.__select__]
 		if where:
 			sql.append('where')
@@ -218,26 +218,26 @@ class Model(dict, metaclass=ModelMetaclass):
 				args.extend(limit)
 			else:
 				raise ValueError('Invalid limit value: %s' % str(limit))
-		rs = yield from select(' '.join(sql), args)
-		return [cls(**r) for r in rs]:
-	
-	@classmethod 
+		rs = await select(' '.join(sql), args)
+		return [cls(**r) for r in rs]
+
+	@classmethod
 	async def findNumber(cls, selectField, where=None, args=None):
-		' find number by select and where. '
+		#' find number by select and where. '
 		sql = ['select %s _num_ from `%s`' % (selectField, cls.__table__)]
 		if where:
 			sql.append('where')
 			sql.append(where)
-		rs = yield from select(' '.join(sql), args, 1)
+		rs = await select(' '.join(sql), args, 1)
 		if len(rs) == 0:
 			return None
 		return rs[0]['_num_']
 
 	@classmethod
 	async def find(cls, pk):
-		' find object by primary key. '
-		rs = yield from select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__,
-			[pk], 1)) 
+		#' find object by primary key. '
+		rs = await select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__,
+			[pk], 1))
 		if len(rs) == 0:
 			return None
 		return cls(**rs[0])
@@ -245,37 +245,37 @@ class Model(dict, metaclass=ModelMetaclass):
 	async def save(self):
 		args = list(map(self.getValueOrDefault, self.__fields__))
 		args.append(self.getValueOrDefault(self.__primary_key__))
-		rows = yield from execute(self.__insert__, args)
+		rows = await execute(self.__insert__, args)
 		if rows != 1:
 			logging.warn('failed to insert record: affected rows: %s' % rows)
 
 	async def update(self):
 		args = list(map(self.getValue, self.__fields__))
 		args.append(self.getValue(self.__primary_key__))
-		rows = yield from execute(self.__update__, args)
+		rows = await execute(self.__update__, args)
 		if rows != 1:
 			logging.warn('failes to update by primary key: affected rows: %s'
 			 % rows)
 
 	async def remove(self):
 		args = [self.getValue(self.__primary_key__)]
-		rows = yield from execute(self.__delete__, args)
+		rows = await execute(self.__delete__, args)
 		if rows != 1:
 			logging.warn('failed to remove by primary key: affected rows: %s'
 				% rows)
 
 '''
 Model从dict继承，所以具备所有dict的功能，
-同时又实现了特殊方法__getattr__()和__setattr__()，因此又可以像引用普通字段那样写	
-'''		
-		
+同时又实现了特殊方法__getattr__()和__setattr__()，因此又可以像引用普通字段那样写
+'''
+
 #ORM:
 '''
 有了基本的select()和execute()函数,我们就可以开始编写一个简单的ORM了。
 设计ORM需要从上层调用者的角度来设计。
 '''
 '''
-from orm import Model, StringField, IntergerField 
+from orm import Model, StringField, IntergerField
 class User(Model):
 	__table__ = 'users'
 	id = IntergerField(primary_key=True)
@@ -293,6 +293,6 @@ user.insert()
 # 查询所有的user对象
 users = User.findAll()
 	'''
-	
+
 
 
